@@ -1,4 +1,8 @@
-﻿<#
+﻿
+#region Help
+# ----------
+
+<#
 	.SYNOPSIS
     
 		Get-HyperVReport.ps1 (aka Hyper-V Reporting Script) can be used to report Hyper-V Cluster or Standalone environments.
@@ -18,8 +22,10 @@
 			o Advanced error handling and logging. (Console messages and log file)
 
 		Version History:
-
-			[x] Version 1.5 - 05.March.2015
+			[x] Version 1.6 - 13.April.2018
+			[ ] Version 1.5 - 05.March.2015
+			[ ] Version 1.1 - 14.January.2015
+			[ ] Version 1.0 - 06.January.2015
 
 		Requirements:
 
@@ -233,7 +239,7 @@
 
 		Creates a Hyper-V Cluster report and sends it to multiple recipients as attachment without smtp authentication.
 
-		.\Get-HyperVReport.ps1 -Cluster Hvcluster1 -SendMail $true -SMTPServer 10.29.0.50 -MailFrom sender@hyperv.corp -MailTo recepient1@hyperv.corp,recepient2@hyperv.corp
+		.\Get-HyperVReport.ps1 -Cluster SIS_CLUSTER -SendMail $true -SMTPServer smtp.sdcoe.net -MailFrom DCAdmin@sdcoe.net -MailTo francisco.tamayo@sdcoe.net
 
 	.EXAMPLE
 
@@ -249,7 +255,22 @@
  
 		None
  
+	.NOTES
+ 
+		Author: Serhat AKINCI
+		Website: http://www.serhatakinci.com
+		Email: serhatakinci@gmail.com
+		Date created: 26.December.2014
+		Last modified: 05.March.2015
+		Version: 1.5
+ 
+	.LINK
+    
+		http://www.serhatakinci.com
+		https://twitter.com/serhatakinci
 #>
+
+#endregion Help
 
 #region Script Parameters
 # -----------------------
@@ -292,19 +313,19 @@ Param (
                 Mandatory=$false,
                 HelpMessage='Adds Timestamp to HTML report file name (The default is $true)')]
                
-                [bool]$ReportFileNameTimeStamp = $false,
+                [bool]$ReportFileNameTimeStamp = $true,
 
     [parameter(
                 Mandatory=$false,
                 HelpMessage='Activates the e-mail sending feature ($true/$false). The default value is "$false"')]
                
-                [bool]$SendMail = $false,
+                [bool]$SendMail = $True,
 
     [parameter(
                 Mandatory=$false,
                 HelpMessage='SMTP Server Address (Like IP address, hostname or FQDN)')]
             
-                [string]$SMTPServer,
+                [string]$SMTPServer = "smtp.sdcoe.net",
 
     [parameter(
                 Mandatory=$false,
@@ -316,13 +337,13 @@ Param (
                 Mandatory=$false,
                 HelpMessage='Recipient e-mail address')]
                
-                [array]$MailTo,
+                [array]$MailTo = "francisco.tamayo@sdcoe.net" ,
 
     [parameter(
                 Mandatory=$false,
                 HelpMessage='Sender e-mail address')]
                
-                [string]$MailFrom,
+                [string]$MailFrom = "DCadmin@sdcoe.net",
 
     [parameter(
                 Mandatory=$false,
@@ -709,7 +730,7 @@ Function sConvert-VolumeSizeColors {
 #----------------
 
 # Print MSG
-sPrint -Type 1 -Message "Started! Hyper-V Reporting Script (Version 1.5)"
+sPrint -Type 1 -Message "Started! Hyper-V Reporting Script (Version 1.6)"
 Start-Sleep -Seconds 3
 
 # State Colors
@@ -814,7 +835,7 @@ $osVersion = sGet-Wmi -ComputerName $env:COMPUTERNAME -Namespace root\Cimv2 -Cla
 
     if ($osVersion)
     {
-        if (($OsVersion -like "6.2*") -or ($OsVersion -like "6.3*"))
+        if (($OsVersion -like "6.2*") -or ($OsVersion -like "6.3*") -or ($OsVersion -like "10.0*"))
         {
             if ($osName -like "Microsoft Windows 8*")
             {
@@ -926,8 +947,6 @@ $osVersion = sGet-Wmi -ComputerName $env:COMPUTERNAME -Namespace root\Cimv2 -Cla
         Break
     }
 
-# Special Thanks to Serhat Akinci
-	
 $Computers = $null
 $ClusterName = $null
 [array]$VMHosts = $null
@@ -941,7 +960,7 @@ $ClusterName = $null
 $outHtmlStart = "<!DOCTYPE html>
 <html>
 <head>
-<title>ghostinthewires Internal Hyper-V Environment Report</title>
+<title>$Cluster Hyper-V Environment Report</title>
 <style>
 /*Reset CSS*/
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp,
@@ -1086,7 +1105,7 @@ th {
 </head>
 <body>
 <br><br>
-<center><h1>ghostinthewires Internal Hyper-V Environment Hourly Report</h1></center>
+<center><h1> $Cluster Hyper-V Environment Report</h1></center>
 <center><font face=""Verdana,sans-serif"" size=""3"" color=""#222222"">Generated on $($Date) at $($Time)</font></center>
 $($hlString)
 <br>
@@ -1151,7 +1170,7 @@ if ($Cluster) {
             $osVersion = $null
             $getClusterOwnerNode = Get-ClusterNode -Cluster $ClusterName -Name $clusterOwnerHostName
             $osVersion = ($getClusterOwnerNode.MajorVersion).ToString() + "." + ($getClusterOwnerNode.MinorVersion).ToString()
-            if (($osVersion -like "6.2") -or ($osVersion -like "6.3"))
+            if (($OsVersion -like "6.2*") -or ($OsVersion -like "6.3*") -or ($OsVersion -like "10.0*"))
             {
                 if ((Get-WindowsFeature -ComputerName $clusterOwnerHostName -Name "Hyper-V").Installed)
                 {
@@ -1239,7 +1258,7 @@ if ($VMHost) {
 
         if ($OsVersion)
         {
-            if (($OsVersion -like "6.2*") -or ($OsVersion -like "6.3*"))
+            if (($OsVersion -like "6.2*") -or ($OsVersion -like "6.3*") -or ($OsVersion -like "10.0*"))
             {
                 if ((Get-WindowsFeature -ComputerName $ComputerName -Name "Hyper-V").Installed)
                 {
@@ -1335,6 +1354,7 @@ foreach ($vmHostItem in $vmHosts) {
     $vmHostVpLpRatio = 0
     $vmHostRunningClusVmCount= 0
     $vmHostGet = Get-VMHost -ComputerName $vmHostItem
+	$vmHostGetIP = Get-VMHost 
     $vmHostVMs = Get-VM -ComputerName $vmHostItem
     $vmHostVmCount = $vmHostVMs.Count + ($offlineVmConfigData | where{$_.OwnerNode -eq "$vmHostItem"}).Count
     $vmHostRunningVmCount = ($vmHostVMs | where{$_.State -eq "Running"}).Count
@@ -2048,7 +2068,7 @@ ForEach ($VMHostItem in $VMHosts) {
                     }
                     else
                     {
-                        if ($OsVersion -like "6.2*")
+                        if ($OsVersion -like "*")
                         {
                             $outVmNetAdapterClusterMonitored = "Protected Network: N/A"
                         }
@@ -2277,7 +2297,7 @@ ForEach ($VMHostItem in $VMHosts) {
                             $vmDiskData += "<p style=""margin-top:5px;text-align:left;text-indent:1nd3ntPlaceHolderpx""><abbr title=""$($vmDiskPath)"">$($vmDiskName)<span style=""font-size:10px;color:orange""> *</span></abbr> <br><span style=""display:inline-block;text-indent:1nd3ntPlaceHolderpx;font-size:10px;color:#BDBDBD"">&#10148; CurrentFileSize $($vmDiskFileSize[0])$($vmDiskFileSize[1]) (MaximumDiskSize $($vmDiskMaxSize[0])$($vmDiskMaxSize[1]))</span> <br><span style=""display:inline-block;text-indent:1nd3ntPlaceHolderpx;font-size:10px;color:#BDBDBD"">&#10148; $($vmDiskType) VHD | $($vmDiskControllerType) Controller | Fragmentation <span style=""color:$($vmDiskFragmentationTextColor);background-color:$($vmDiskFragmentationBgColor)"">$($vmDiskFragmentation)</span></span></p>"
                             $parentPath = $vmDiffDisk.ParentPath
                         }
-                        Until ($parentPath -eq $null)
+                        Until (($parentPath -eq $null) -or ($parentPath -eq ""))
                     }
                     else
                     {
@@ -3310,7 +3330,7 @@ $ovTotalVmVHD = sConvert-Size -DiskVolumeSpace $ovTotalVmVHD -DiskVolumeSpaceUni
 
 $outClusterOverview = "
     <div class=""Overview""><!--Start Overview Class-->
-		<h2>Cluster Overview <span style=""font-size:16px;color:#BDBDBD"">(WCVRTXCLUSTER)</span></h2><br>
+		<h2>Cluster Overview <span style=""font-size:16px;color:#BDBDBD"">(HVCluster)</span></h2><br>
 		<div class=""OverviewFrame"">
 			<table id=""Overview-Table"">
 			<br>
@@ -3375,8 +3395,16 @@ $outClusterOverview = "
 
 $outHtmlEnd ="
 </div><!--End ReportBody-->
-<center><p style=""font-size:12px;color:#BDBDBD"">ScriptVersion: 1.5 | Find More Useful Tools Like This at https://github.com/ghostinthewires </p></center>
+<center><p style=""font-size:12px;color:#BDBDBD"">Version: 1.6 | San Diego County Office Of Education - Data Center Operations | 2018</p></center>
 <br>
+<script>
+var els = document.querySelectorAll('td');
+for (var i=0; i < els.length; i++) {
+	if(els[i].getAttribute('rowspan') === '0'){
+		els[i].setAttribute('rowspan', 1);
+	}
+}
+</script> 
 </body>
 </html>"
 
@@ -3415,7 +3443,7 @@ if ($SendMail -or $SMTPServer)
 
         sPrint -Type 1 -Message "Sending e-mail..." -WriteToLogFile $True
 
-        $subject = "Hyper-V Environment Report"
+        $subject = $Cluster + " Hyper-V Environment Report"
         $attachment = $ReportFile
         $MailTo = ($MailTo -join ',').ToString()
         $mailMessage = New-Object System.Net.Mail.MailMessage
